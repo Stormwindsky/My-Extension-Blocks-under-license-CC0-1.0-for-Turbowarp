@@ -27,7 +27,7 @@
           {
             opcode: 'downloadScripts',
             blockType: Scratch.BlockType.COMMAND,
-            text: 'DOWNLOAD LUA SCRIPTS'
+            text: 'DOWNLOAD ALL SCRIPTS (LUA & PY)'
           }
         ]
       };
@@ -52,11 +52,47 @@
 Created by: Stormwindsky
 License: CC0 1.0
 
+SERVER SIDE (Replit):
+1. Create a new Python Repl.
+2. In the Shell, type: pip install flask-cors
+3. Paste the content of 'main.py' and click RUN.
+
+ROBLOX SIDE:
 1. Create a RemoteEvent in ReplicatedStorage named 'ChatBridgeEvent'.
 2. Create a Part in Workspace named 'TurboPart' (Anchored: Yes, CanCollide: No).
-3. Put the Server Script in ServerScriptService.
-4. Put the Local Script in StarterPlayerScripts.
-5. In the Server Script, don't forget to put YOUR /get-chat URL.`;
+3. Put 'ServerScript.lua' in ServerScriptService.
+4. Put 'LocalScript.lua' in StarterPlayerScripts.
+5. In 'ServerScript.lua', replace the URL with your Replit 'get-chat' address.`;
+
+      const mainPy = `from flask import Flask, request, jsonify
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)
+
+last_message = {"user": "System", "content": "Bridge Ready!"}
+
+@app.route('/')
+def home():
+    return "BloxBridge is Online!"
+
+@app.route('/send', methods=['POST', 'OPTIONS'])
+def send():
+    global last_message
+    if request.method == 'OPTIONS':
+        return jsonify({"status": "ok"}), 200
+    data = request.get_json()
+    if data and 'user' in data and 'content' in data:
+        last_message = {"user": data['user'], "content": data['content']}
+        return jsonify({"status": "success"}), 200
+    return jsonify({"status": "error"}), 400
+
+@app.route('/get-chat', methods=['GET'])
+def get_chat():
+    return jsonify(last_message)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080)`;
 
       const serverScript = `local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -95,8 +131,9 @@ RemoteEvent.OnClientEvent:Connect(function(user, message)
     generalChannel:DisplaySystemMessage(formattedMessage)
 end)`;
 
-      // Déclenche les 3 téléchargements
+      // Download all 4 files
       this._downloadFile("instructions.txt", readme);
+      this._downloadFile("main.py", mainPy);
       this._downloadFile("ServerScript.lua", serverScript);
       this._downloadFile("LocalScript.lua", localScript);
     }
