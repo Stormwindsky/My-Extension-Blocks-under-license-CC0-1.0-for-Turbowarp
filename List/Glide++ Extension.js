@@ -6,6 +6,9 @@
 (function (Scratch) {
   'use strict';
 
+  // Délai d'un frame Scratch (~33ms à 30fps)
+  const FRAME_DELAY = 1000 / 30;
+
   class GlidePlusPlus {
     constructor() {
       this.activeGlides = new Set();
@@ -61,35 +64,43 @@
 
       const shouldContinue = () => this.activeGlides.has(glideId);
 
+      // Attend un vrai frame (33ms) pour que Scratch puisse rendre l'image
+      const waitFrame = () => new Promise(r => setTimeout(r, FRAME_DELAY));
+
       // --- MODE: CLASSIC ---
+      // speedInput = durée en secondes
       if (mode === 'Classic') {
         const startX = util.target.x;
         const startY = util.target.y;
-        const duration = Math.max(1, speedInput * 30);
-        for (let i = 0; i <= duration && shouldContinue(); i++) {
-          const ratio = i / duration;
-          util.target.setXY(startX + (targetX - startX) * ratio, startY + (targetY - startY) * ratio);
-          // Yield to the Scratch sequencer properly
-          await Promise.resolve();
+        const totalFrames = Math.max(1, Math.round(speedInput * 30)); // ex: 2s = 60 frames
+        
+        for (let i = 1; i <= totalFrames && shouldContinue(); i++) {
+          const ratio = i / totalFrames;
+          util.target.setXY(
+            startX + (targetX - startX) * ratio,
+            startY + (targetY - startY) * ratio
+          );
+          await waitFrame(); // attend ~33ms = 1 frame à 30fps
         }
-      } 
-      
+      }
+
       // --- MODE: SMOOTH ---
+      // speedInput = facteur de lissage (plus il est grand, plus c'est lent)
       else if (mode === 'Smooth') {
         const speed = Math.max(1.1, speedInput);
-        // Using a while loop that yields properly to Scratch's frame rate
+
         while (shouldContinue()) {
           const distX = targetX - util.target.x;
           const distY = targetY - util.target.y;
-          
+
           if (Math.abs(distX) < 0.1 && Math.abs(distY) < 0.1) break;
 
-          const dx = distX / speed;
-          const dy = distY / speed;
-          util.target.setXY(util.target.x + dx, util.target.y + dy);
-          
-          // IMPORTANT: This allows other blocks to run and Scratch to render
-          await Promise.resolve(); 
+          util.target.setXY(
+            util.target.x + distX / speed,
+            util.target.y + distY / speed
+          );
+
+          await waitFrame(); // attend ~33ms pour un vrai glissement visible
         }
       }
 
@@ -131,13 +142,13 @@
         const durationFrames = Math.max(1, speedInput * 30);
         const fps = Math.max(1, Math.min(30, valInput));
         const frameDelay = 1000 / fps;
-        
+
         let elapsed = 0;
         while (shouldContinue() && elapsed < durationFrames) {
-            elapsed += (30 / fps);
-            const ratio = Math.min(1, elapsed / durationFrames);
-            util.target.setXY(startX + (targetX - startX) * ratio, startY + (targetY - startY) * ratio);
-            await new Promise(r => setTimeout(r, frameDelay));
+          elapsed += (30 / fps);
+          const ratio = Math.min(1, elapsed / durationFrames);
+          util.target.setXY(startX + (targetX - startX) * ratio, startY + (targetY - startY) * ratio);
+          await new Promise(r => setTimeout(r, frameDelay));
         }
       }
 
