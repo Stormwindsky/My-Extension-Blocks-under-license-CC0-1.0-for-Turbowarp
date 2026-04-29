@@ -232,5 +232,5 @@
     setCorrectness(args) { this.isCorrect = (args.STATUS === 'correct'); }
   }
 
-  Scratch.extensions.register(new ModernQuizPro());
+  Scratch.extensions.register(new ModernQuiz());
 })(Scratch);
